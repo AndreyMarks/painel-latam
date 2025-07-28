@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Painel LATAM - Cortes</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #fff;
+      color: #333;
+      margin: 0;
+      padding: 20px;
+      overflow: hidden;
+    }
+
+    .painel-container {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      padding: 15px;
+      max-width: 1000px;
+      margin: auto;
+    }
+
+    h1 {
+      color: #4b006e;
+      margin: 10px 0 5px;
+      font-size: 22px;
+      text-align: center;
+    }
+
+    #hora-atual, #peso-total {
+      text-align: center;
+      color: #555;
+      font-size: 14px;
+      margin-bottom: 5px;
+    }
+
+    #peso-total {
+      font-weight: bold;
+      color: #4b006e;
+    }
+
+    table {
+      margin: 10px auto;
+      border-collapse: collapse;
+      width: 100%;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 6px;
+      font-size: 13px;
+      text-align: center;
+    }
+
+    th {
+      background-color: #4b006e;
+      color: #fff;
+    }
+
+    tr:nth-child(even) {
+      background-color: #f3e8fa;
+    }
+
+    tr:hover {
+      background-color: #e1c8f3;
+    }
+
+    #fullscreen-btn {
+      position: fixed;
+      top: 10px;
+      right: 15px;
+      padding: 8px 14px;
+      background-color: #4b006e;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      z-index: 999;
+    }
+
+    .piscar {
+      animation: piscarTela 0.3s;
+    }
+
+    @keyframes piscarTela {
+      0%   { background-color: #e60000; color: white; }
+      100% { background-color: #fff; color: #333; }
+    }
+  </style>
+</head>
+<body>
+  <button id="fullscreen-btn" onclick="ativarFullscreen()">Tela Cheia</button>
+
+  <div class="painel-container">
+    <h1>Painel de Voos Cortados - LATAM</h1>
+    <div id="hora-atual">--/--/---- --:--:--</div>
+    <div id="peso-total">Peso total cortado: 0</div>
+
+    <table id="tabela">
+      <thead>
+        <tr>
+          <th>Voo</th>
+          <th>Rota</th>
+          <th>Peso</th>
+          <th>Motivo</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <audio id="alerta-som" src="https://www.soundjay.com/button/beep-07.wav" preload="auto"></audio>
+
+  <script>
+    const url = 'https://script.google.com/macros/s/AKfycbw5ngYRWMsvWwcqBjqudQZOhSXwva30v2LhceO-T2b0ICKhJX5PiJMBB9Aja1afZLs0/exec';
+    let ultimaQuantidade = 0;
+
+    function limparMotivo(motivo) {
+      if (!motivo) return '';
+      return String(motivo)
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^\w\s.,;:!?()-]/g, '')
+        .trim();
+    }
+
+    function atualizarHora() {
+      const agora = new Date();
+      const data = agora.toLocaleDateString('pt-BR');
+      const hora = agora.toLocaleTimeString('pt-BR');
+      document.getElementById('hora-atual').textContent = `${data} - ${hora}`;
+    }
+
+    function atualizarTabela() {
+      fetch(url)
+        .then(res => res.json())
+        .then(dados => {
+          if (dados.length && typeof dados[0].voo === "string" && dados[0].voo.toLowerCase().includes("flight")) {
+            dados.shift();
+          }
+
+          const filtrados = dados.filter(item => {
+            const pesoBruto = String(item.peso || '').replace(/[^\d.,]/g, '').replace(',', '.').trim();
+            const peso = parseFloat(pesoBruto);
+            const motivo = item.motivo && String(item.motivo).trim();
+
+            return motivo && motivo !== '' && !isNaN(peso) && peso > 0 && peso < 10000;
+          });
+
+          // Calcular peso total
+          const pesoTotal = filtrados.reduce((acc, item) => {
+            const peso = parseFloat(String(item.peso).replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
+            return acc + peso;
+          }, 0);
+
+          document.getElementById('peso-total').textContent = `Peso total cortado: ${pesoTotal.toFixed(2)}`;
+
+          const tbody = document.querySelector('#tabela tbody');
+          tbody.innerHTML = '';
+
+          filtrados.forEach(item => {
+            const tr = document.createElement('tr');
+
+            const tdVoo = document.createElement('td');
+            tdVoo.textContent = item.voo || '';
+            tr.appendChild(tdVoo);
+
+            // Corrigindo rota - pode estar no índice 6 ou 5 dependendo do GAS, vamos mostrar item.rota
+            const tdRota = document.createElement('td');
+            tdRota.textContent = item.rota || '';
+            tr.appendChild(tdRota);
+
+            const peso = parseFloat(String(item.peso).replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
+            const tdPeso = document.createElement('td');
+            tdPeso.textContent = peso;
+            tr.appendChild(tdPeso);
+
+            const tdMotivo = document.createElement('td');
+            tdMotivo.textContent = limparMotivo(item.motivo);
+            tr.appendChild(tdMotivo);
+
+            tbody.appendChild(tr);
+          });
+
+          if (filtrados.length > ultimaQuantidade) {
+            ultimaQuantidade = filtrados.length;
+            document.body.classList.add('piscar');
+            setTimeout(() => document.body.classList.remove('piscar'), 300);
+
+            const audio = document.getElementById("alerta-som");
+            audio.play().catch(() => {});
+          }
+        })
+        .catch(err => console.error("Erro ao buscar dados:", err));
+    }
+
+    function ativarFullscreen() {
+      const el = document.documentElement;
+      if (el.requestFullscreen) el.requestFullscreen();
+      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+      else if (el.msRequestFullscreen) el.msRequestFullscreen();
+    }
+
+    atualizarHora();
+    atualizarTabela();
+    setInterval(atualizarHora, 1000);       // Atualiza hora em tempo real
+    setInterval(atualizarTabela, 15000);    // Atualiza dados a cada 15s
+  </script>
+</body>
+</html>
