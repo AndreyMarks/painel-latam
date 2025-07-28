@@ -45,6 +45,7 @@
       font-size: 2.2vh;
       font-weight: 500;
     }
+<div id="mensagem-erro" class="error-message" style="display: none;"></div>
 
     .status-indicator {
       display: flex;
@@ -445,15 +446,12 @@
         }
       }
 
-      mostrarErro(mensagem) {
-        this.elementos.tabelaBody.innerHTML = `
-          <tr>
-            <td colspan="4" class="error-message">
-              ⚠️ ${mensagem}
-            </td>
-          </tr>
-        `;
-      }
+     mostrarErro(mensagem) {
+  const erroEl = document.getElementById('mensagem-erro');
+  erroEl.textContent = `⚠️ ${mensagem}`;
+  erroEl.style.display = 'block';
+}
+
 
       definirStatus(tipo, texto) {
         this.elementos.statusText.textContent = texto;
