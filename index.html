@@ -240,14 +240,17 @@
   <div class="main-content">
     <div class="table-container">
       <table id="tabela">
-        <thead>
-          <tr>
-            <th style="width: 15%;">Voo</th>
-            <th style="width: 20%;">Rota</th>
-            <th style="width: 15%;">Peso (kg)</th>
-            <th style="width: 50%;">Motivo</th>
-          </tr>
-        </thead>
+     <thead>
+  <tr>
+    <th style="width: 15%;">Voo</th>
+    <th style="width: 15%;">Tipo</th>
+    <th style="width: 15%;">Rota</th>
+    <th style="width: 10%;">Peso</th>
+    <th style="width: 25%;">Motivo</th>
+    <th style="width: 10%;">Data</th>
+    <th style="width: 10%;">Hora</th>
+  </tr>
+</thead>
         <tbody id="tabela-body">
           <tr>
             <td colspan="4" class="loading">
@@ -260,226 +263,192 @@
     </div>
   </div>
 
-  <script>
-    class PainelVoos {
-      constructor() {
-        this.url = 'https://script.google.com/macros/s/AKfycbw5ngYRWMsvWwcqBjqudQZOhSXwva30v2LhceO-T2b0ICKhJX5PiJMBB9Aja1afZLs0/exec';
-        this.ultimaQuantidade = 0;
-        this.ultimaAtualizacao = null;
+ 
+<script>
+  class PainelVoos {
+    constructor() {
+      this.url = 'https://script.google.com/macros/s/AKfycbw5ngYRWMsvWwcqBjqudQZOhSXwva30v2LhceO-T2b0ICKhJX5PiJMBB9Aja1afZLs0/exec';
+      this.ultimaQuantidade = 0;
+      this.tentativasErro = 0;
+      this.maxTentativas = 3;
+      this.intervaloAtualizacao = 5000;
+      this.timeoutRequisicao = 10000;
+
+      this.elementos = {
+        horaAtual: document.getElementById('hora-atual'),
+        pesoTotal: document.getElementById('peso-total'),
+        tabelaBody: document.getElementById('tabela-body'),
+        statusDot: document.getElementById('status-dot'),
+        statusText: document.getElementById('status-text')
+      };
+
+      this.inicializar();
+    }
+
+    inicializar() {
+      this.atualizarHora();
+      this.atualizarTabela();
+      setInterval(() => this.atualizarHora(), 1000);
+      setInterval(() => this.atualizarTabela(), this.intervaloAtualizacao);
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) this.atualizarTabela();
+      });
+    }
+
+    atualizarHora() {
+      const agora = new Date();
+      const data = agora.toLocaleDateString('pt-BR');
+      const hora = agora.toLocaleTimeString('pt-BR');
+      this.elementos.horaAtual.textContent = `${data} - ${hora}`;
+    }
+
+    async atualizarTabela() {
+      try {
+        this.definirStatus('loading', 'Atualizando...');
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), this.timeoutRequisicao);
+
+        const response = await fetch(this.url, {
+          signal: controller.signal,
+          cache: 'no-cache'
+        });
+
+        clearTimeout(timeoutId);
+        if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        const dados = await response.json();
+        if (dados.error) throw new Error(dados.message || 'Erro no servidor');
+
+        this.processarDados(dados);
         this.tentativasErro = 0;
-        this.maxTentativas = 3;
-        this.intervaloAtualizacao = 5000; // 5 segundos
-        this.timeoutRequisicao = 10000; // 10 segundos
-        
-        this.elementos = {
-          horaAtual: document.getElementById('hora-atual'),
-          pesoTotal: document.getElementById('peso-total'),
-          tabelaBody: document.getElementById('tabela-body'),
-          statusDot: document.getElementById('status-dot'),
-          statusText: document.getElementById('status-text')
-        };
+        this.definirStatus('success', 'Conectado');
 
-        this.inicializar();
-      }
-
-      inicializar() {
-        this.atualizarHora();
-        this.atualizarTabela();
-        
-        // Atualizar hora a cada segundo
-        setInterval(() => this.atualizarHora(), 1000);
-        
-        // Atualizar dados a cada 5 segundos
-        setInterval(() => this.atualizarTabela(), this.intervaloAtualizacao);
-
-        // Detectar quando a página fica visível novamente
-        document.addEventListener('visibilitychange', () => {
-          if (!document.hidden) {
-            this.atualizarTabela();
-          }
-        });
-      }
-
-      atualizarHora() {
-        const agora = new Date();
-        const data = agora.toLocaleDateString('pt-BR');
-        const hora = agora.toLocaleTimeString('pt-BR');
-        this.elementos.horaAtual.textContent = `${data} - ${hora}`;
-      }
-
-      async atualizarTabela() {
-        try {
-          this.definirStatus('loading', 'Atualizando...');
-          
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), this.timeoutRequisicao);
-
-          const response = await fetch(this.url, {
-            signal: controller.signal,
-            cache: 'no-cache'
-          });
-
-          clearTimeout(timeoutId);
-
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-          }
-
-          const dados = await response.json();
-
-          // Verificar se há erro na resposta
-          if (dados.error) {
-            throw new Error(dados.message || 'Erro no servidor');
-          }
-
-          this.processarDados(dados);
-          this.tentativasErro = 0;
-          this.definirStatus('success', 'Conectado');
-
-        } catch (error) {
-          console.error('Erro ao buscar dados:', error);
-          this.tentativasErro++;
-          
-          if (this.tentativasErro >= this.maxTentativas) {
-            this.mostrarErro(`Erro de conexão: ${error.message}`);
-            this.definirStatus('error', 'Erro de conexão');
-          } else {
-            this.definirStatus('error', `Tentativa ${this.tentativasErro}/${this.maxTentativas}`);
-          }
-        }
-      }
-
-      processarDados(dados) {
-        // Remover cabeçalho se presente
-        if (dados.length && typeof dados[0].voo === "string" && 
-            dados[0].voo.toLowerCase().includes("flight")) {
-          dados.shift();
-        }
-
-        // Filtrar dados válidos
-        const filtrados = dados.filter(item => {
-          const pesoBruto = String(item.peso || '').replace(/[^\d.,]/g, '').replace(',', '.').trim();
-          const peso = parseFloat(pesoBruto);
-          const motivo = item.motivo && String(item.motivo).trim();
-
-          return motivo && motivo !== '' && !isNaN(peso) && peso > 0 && peso < 50000;
-        });
-
-        // Calcular peso total
-        const pesoTotal = filtrados.reduce((acc, item) => {
-          const peso = parseFloat(String(item.peso).replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
-          return acc + peso;
-        }, 0);
-
-        this.elementos.pesoTotal.textContent = `Peso total cortado: ${pesoTotal.toLocaleString('pt-BR')} kg`;
-
-        // Atualizar tabela
-        this.atualizarTabelaHTML(filtrados);
-
-        // Verificar se há novos dados para alerta
-        if (filtrados.length > this.ultimaQuantidade) {
-          this.ultimaQuantidade = filtrados.length;
-          this.mostrarAlerta();
+      } catch (error) {
+        console.error('Erro ao buscar dados:', error);
+        this.tentativasErro++;
+        if (this.tentativasErro >= this.maxTentativas) {
+          this.mostrarErro(`Erro de conexão: ${error.message}`);
+          this.definirStatus('error', 'Erro de conexão');
         } else {
-          this.ultimaQuantidade = filtrados.length;
+          this.definirStatus('error', `Tentativa ${this.tentativasErro}/${this.maxTentativas}`);
         }
-
-        this.ultimaAtualizacao = new Date();
-      }
-
-      atualizarTabelaHTML(dados) {
-        if (dados.length === 0) {
-          this.elementos.tabelaBody.innerHTML = `
-            <tr>
-              <td colspan="4" class="no-data">
-                ✅ Nenhum voo cortado no momento
-              </td>
-            </tr>
-          `;
-          return;
-        }
-
-        const html = dados.map(item => {
-          const peso = parseFloat(String(item.peso).replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
-          const pesoFormatado = peso.toLocaleString('pt-BR');
-          
-          return `
-            <tr>
-              <td><strong>${this.sanitizarTexto(item.voo || '')}</strong></td>
-              <td>${this.sanitizarTexto(item.rota || '')}</td>
-              <td class="peso-cell">${pesoFormatado}</td>
-              <td class="motivo-cell">${this.sanitizarTexto(item.motivo || '')}</td>
-            </tr>
-          `;
-        }).join('');
-
-        this.elementos.tabelaBody.innerHTML = html;
-      }
-
-      sanitizarTexto(texto) {
-        if (!texto) return '';
-        return String(texto)
-          .replace(/[<>]/g, '')
-          .trim();
-      }
-
-      mostrarAlerta() {
-        document.body.classList.add('alert-flash');
-        setTimeout(() => document.body.classList.remove('alert-flash'), 500);
-
-        // Tentar reproduzir som de alerta (navegadores modernos podem bloquear)
-        try {
-          const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-          const oscillator = audioContext.createOscillator();
-          const gainNode = audioContext.createGain();
-          
-          oscillator.connect(gainNode);
-          gainNode.connect(audioContext.destination);
-          
-          oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
-          gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
-          
-          oscillator.start();
-          oscillator.stop(audioContext.currentTime + 0.2);
-        } catch (e) {
-          console.log('Áudio não disponível');
-        }
-      }
-
-     mostrarErro(mensagem) {
-  const erroEl = document.getElementById('mensagem-erro');
-  erroEl.textContent = `⚠️ ${mensagem}`;
-  erroEl.style.display = 'block';
-}
-
-
-      definirStatus(tipo, texto) {
-        this.elementos.statusText.textContent = texto;
-        this.elementos.statusDot.className = `status-dot ${tipo === 'error' ? 'error' : ''}`;
       }
     }
 
-    // Inicializar aplicação quando a página carregar
-    document.addEventListener('DOMContentLoaded', () => {
-      new PainelVoos();
-    });
+    processarDados(dados) {
+      if (dados.length && typeof dados[0].voo === "string" &&
+          dados[0].voo.toLowerCase().includes("flight")) {
+        dados.shift();
+      }
 
-    // Função para ativar tela cheia (pode ser chamada via console)
-    function ativarFullscreen() {
-      const el = document.documentElement;
-      if (el.requestFullscreen) el.requestFullscreen();
-      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-      else if (el.msRequestFullscreen) el.msRequestFullscreen();
+      const filtrados = dados.filter(item => {
+        const pesoBruto = String(item.peso || '').replace(/[^\d.,]/g, '').replace(',', '.').trim();
+        const peso = parseFloat(pesoBruto);
+        const motivo = item.motivo && String(item.motivo).trim();
+        return motivo && motivo !== '' && !isNaN(peso) && peso > 0 && peso < 50000;
+      });
+
+      const pesoTotal = filtrados.reduce((acc, item) => {
+        const peso = parseFloat(String(item.peso).replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
+        return acc + peso;
+      }, 0);
+
+      this.elementos.pesoTotal.textContent = `Peso total cortado: ${pesoTotal.toLocaleString('pt-BR')} kg`;
+
+      this.atualizarTabelaHTML(filtrados);
+
+      if (filtrados.length > this.ultimaQuantidade) {
+        this.ultimaQuantidade = filtrados.length;
+        this.mostrarAlerta();
+      } else {
+        this.ultimaQuantidade = filtrados.length;
+      }
     }
 
-    // Atalho de teclado para tela cheia
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'F11' || (e.key === 'f' && e.ctrlKey)) {
-        e.preventDefault();
-        ativarFullscreen();
+    atualizarTabelaHTML(dados) {
+      if (dados.length === 0) {
+        this.elementos.tabelaBody.innerHTML = `
+          <tr>
+            <td colspan="7" class="no-data">
+              ✅ Nenhum voo cortado no momento
+            </td>
+          </tr>
+        `;
+        return;
       }
-    });
-  </script>
+
+      const html = dados.map(item => {
+        const peso = parseFloat(String(item.peso).replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
+        const pesoFormatado = peso.toLocaleString('pt-BR');
+
+        return `
+          <tr>
+            <td><strong>${this.sanitizarTexto(item.voo || '')}</strong></td>
+            <td>${this.sanitizarTexto(item.tipo || '')}</td>
+            <td>${this.sanitizarTexto(item.rota || '')}</td>
+            <td class="peso-cell">${pesoFormatado}</td>
+            <td class="motivo-cell">${this.sanitizarTexto(item.motivo || '')}</td>
+            <td>${this.sanitizarTexto(item.data || '')}</td>
+            <td>${this.sanitizarTexto(item.hora || '')}</td>
+          </tr>
+        `;
+      }).join('');
+
+      this.elementos.tabelaBody.innerHTML = html;
+    }
+
+    sanitizarTexto(texto) {
+      if (!texto) return '';
+      return String(texto).replace(/[<>]/g, '').trim();
+    }
+
+    mostrarAlerta() {
+      document.body.classList.add('alert-flash');
+      setTimeout(() => document.body.classList.remove('alert-flash'), 500);
+      try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 0.2);
+      } catch (e) {
+        console.log('Áudio não disponível');
+      }
+    }
+
+    mostrarErro(mensagem) {
+      const erroEl = document.getElementById('mensagem-erro');
+      erroEl.textContent = `⚠️ ${mensagem}`;
+      erroEl.style.display = 'block';
+    }
+
+    definirStatus(tipo, texto) {
+      this.elementos.statusText.textContent = texto;
+      this.elementos.statusDot.className = `status-dot ${tipo === 'error' ? 'error' : ''}`;
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    new PainelVoos();
+  });
+
+  function ativarFullscreen() {
+    const el = document.documentElement;
+    if (el.requestFullscreen) el.requestFullscreen();
+    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    else if (el.msRequestFullscreen) el.msRequestFullscreen();
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'F11' || (e.key === 'f' && e.ctrlKey)) {
+      e.preventDefault();
+      ativarFullscreen();
+    }
+  });
+</script>
 </body>
 </html>
 
