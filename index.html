@@ -3,12 +3,94 @@
 <head>
   <meta charset="UTF-8" />
   <title>Painel LATAM - Lista de Voos Cortados</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f5f7fa;
+      color: #2c3e50;
+      margin: 0;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    h1 {
+      margin-bottom: 1.5rem;
+      font-weight: 700;
+      font-size: 2rem;
+      color: #34495e;
+    }
+
+    #btn-atualizar {
+      background-color: #1f78c1;
+      border: none;
+      color: white;
+      padding: 0.6rem 1.5rem;
+      font-size: 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      box-shadow: 0 3px 8px rgba(31, 120, 193, 0.4);
+      transition: background-color 0.3s ease;
+      margin-bottom: 2rem;
+    }
+    #btn-atualizar:hover {
+      background-color: #145a8d;
+      box-shadow: 0 4px 12px rgba(20, 90, 141, 0.6);
+    }
+
+    #erro {
+      color: #e74c3c;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      min-height: 1.5rem;
+      text-align: center;
+      max-width: 600px;
+    }
+
+    #lista-dados {
+      list-style: none;
+      padding: 0;
+      max-width: 700px;
+      width: 100%;
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(44, 62, 80, 0.1);
+      overflow: hidden;
+      font-size: 1rem;
+    }
+
+    #lista-dados li {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid #ecf0f1;
+      transition: background-color 0.2s ease;
+      line-height: 1.5;
+    }
+    #lista-dados li:last-child {
+      border-bottom: none;
+    }
+    #lista-dados li:hover {
+      background-color: #e8f1fc;
+    }
+
+    #lista-dados li strong {
+      color: #1f78c1;
+      width: 6rem;
+      display: inline-block;
+    }
+  </style>
 </head>
 <body>
-  <h1>Painel LATAM - Dados de Voos Cortados</h1>
+  <h1>Painel LATAM - Lista de Voos Cortados</h1>
   <button id="btn-atualizar">Atualizar dados</button>
-  <div id="erro" style="color: red; font-weight: bold;"></div>
-  <ul id="lista-dados"></ul>
+  <div id="erro"></div>
+  <ul id="lista-dados">
+    <li>Pressione "Atualizar dados" para carregar.</li>
+  </ul>
 
   <script>
     const url = 'https://script.google.com/macros/s/AKfycbymWN6wZteNypipOJnIiWgyrOEwqZwyfFr3dGwtNBq3z_9Eu54N4FEsFES7jnquns0I/exec';
@@ -28,7 +110,6 @@
           return;
         }
 
-        // Limpa a lista
         lista.innerHTML = '';
 
         dados.forEach(item => {
