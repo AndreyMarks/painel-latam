@@ -1,93 +1,132 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Painel LATAM Compacto</title>
-<style>
-  body {
-    margin: 0;
-    padding: 10px;
-    font-family: Arial, sans-serif;
-    background: #111;
-    color: #eee;
-    overflow: hidden; /* Sem scroll geral */
-    display: flex;
-    height: 100vh;
-  }
-  .container {
-    display: flex;
-    gap: 10px;
-    width: 100%;
-    height: 100%;
-  }
-  table {
-    border-collapse: collapse;
-    width: 100%;
-    font-size: 0.8rem;
-    background: #222;
-    color: #eee;
-  }
-  th, td {
-    border: 1px solid #444;
-    padding: 4px 6px;
-    text-align: center;
-    white-space: nowrap;
-  }
-  th {
-    background: #333;
-    font-weight: bold;
-    position: sticky;
-    top: 0;
-    z-index: 2;
-  }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Painel LATAM Compacto</title>
+  <style>
+    :root {
+      --latam-azul: #1a237e;
+      --latam-roxo: #512da8;
+      --latam-vermelho: #c62828;
+      --cinza-escuro: #1c1c1c;
+      --cinza-medio: #2c2c2c;
+      --cinza-claro: #ccc;
+    }
 
-  /* Tabela MALHA ocupa 40% largura, não tem scroll */
-  #malha {
-    flex: 0 0 40%;
-    overflow: hidden;
-  }
+    * {
+      box-sizing: border-box;
+    }
 
-  /* Tabela PAINEL ocupa 60% largura, scroll vertical */
-  #painel {
-    flex: 0 0 60%;
-    overflow-y: auto;
-    max-height: 100%;
-    position: relative;
-  }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--cinza-escuro);
+      color: white;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
 
-  /* Linhas novas MALHA (vermelho) */
-  tr.nova {
-    animation: piscarVermelho 2s ease-in-out 3;
-  }
-  @keyframes piscarVermelho {
-    0%, 100% { background-color: transparent; }
-    50% { background-color: #a00; }
-  }
+    header {
+      background: linear-gradient(90deg, var(--latam-roxo), var(--latam-azul));
+      padding: 5px 10px;
+      font-size: 0.85rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #fff;
+    }
 
-  /* Linha amarelo check-in */
-  tr.checkin-atual {
-    background-color: #f4d35e !important;
-    transition: background-color 1s ease;
-  }
+    .container {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
 
-  /* Linha amarelo ETD */
-  tr.etd-atual {
-    background-color: #ffb703 !important;
-    transition: background-color 1s ease;
-  }
+    #malha, #painel {
+      padding: 5px;
+    }
 
-  /* Pequeno som e avisos */
-  #status {
-    position: fixed;
-    bottom: 10px;
-    left: 10px;
-    font-size: 0.75rem;
-    color: #ccc;
-  }
-</style>
+    #malha {
+      flex: 0 0 40%;
+      overflow: hidden;
+    }
+
+    #painel {
+      flex: 0 0 60%;
+      overflow-y: auto;
+    }
+
+    h3 {
+      margin: 0 0 5px;
+      font-size: 1rem;
+      color: var(--latam-vermelho);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background-color: var(--cinza-medio);
+      font-size: 0.75rem;
+    }
+
+    th, td {
+      padding: 6px;
+      text-align: center;
+      border: 1px solid #444;
+    }
+
+    th {
+      background-color: var(--latam-azul);
+      color: #fff;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    tr:nth-child(even) {
+      background-color: #222;
+    }
+
+    tr.nova {
+      animation: piscarVermelho 2s ease-in-out 3;
+    }
+
+    @keyframes piscarVermelho {
+      0%, 100% { background-color: transparent; }
+      50% { background-color: var(--latam-vermelho); }
+    }
+
+    tr.checkin-atual {
+      background-color: #f4d35e !important;
+    }
+
+    tr.etd-atual {
+      background-color: #ffb703 !important;
+    }
+
+    #status {
+      position: absolute;
+      bottom: 5px;
+      left: 10px;
+      font-size: 0.7rem;
+      color: var(--cinza-claro);
+    }
+
+    #relogio {
+      font-weight: bold;
+    }
+  </style>
 </head>
 <body>
+  <header>
+    <div>Painel LATAM - Monitoramento</div>
+    <div id="relogio">--:--:--</div>
+  </header>
+
   <div class="container">
     <div id="malha">
       <h3>MALHA (últimos cortes)</h3>
@@ -112,169 +151,161 @@
       </table>
     </div>
   </div>
+
   <div id="status">Atualizando...</div>
 
-<script>
-const urlAPI = 'https://script.google.com/macros/s/AKfycbybJfXvelOC_cLcKqMo134lrCg3UjGUBQmqdruKSxWAo6Pg_7MnHZqUeroELaHA_QM/exec';
+  <script>
+    const urlAPI = 'https://script.google.com/macros/s/AKfycbybJfXvelOC_cLcKqMo134lrCg3UjGUBQmqdruKSxWAo6Pg_7MnHZqUeroELaHA_QM/exec';
 
-const malhaTbody = document.querySelector('#tabela-malha tbody');
-const painelTbody = document.querySelector('#tabela-painel tbody');
-const statusDiv = document.getElementById('status');
+    const malhaTbody = document.querySelector('#tabela-malha tbody');
+    const painelTbody = document.querySelector('#tabela-painel tbody');
+    const statusDiv = document.getElementById('status');
+    const relogio = document.getElementById('relogio');
 
-let ultimosPesos = [];
-let checkinTimeouts = new Map();
-let etdTimeouts = new Map();
-
-async function buscarDados() {
-  statusDiv.textContent = 'Buscando dados...';
-  try {
-    const res = await fetch(urlAPI);
-    const dados = await res.json();
-
-    atualizarMalha(dados.filter(d => d.origem === 'MALHA'));
-    atualizarPainel(dados.filter(d => d.origem === 'PLANEJAMENTO'));
-
-    statusDiv.textContent = `Última atualização: ${new Date().toLocaleTimeString()}`;
-  } catch (e) {
-    statusDiv.textContent = 'Erro ao buscar dados.';
-    console.error(e);
-  }
-}
-
-function atualizarMalha(dadosMalha) {
-  // Verifica novas linhas (pesos que ainda não estavam)
-  let novos = [];
-  dadosMalha.forEach(item => {
-    if (!ultimosPesos.includes(item.pesodecorte)) {
-      novos.push(item);
+    function atualizarRelogio() {
+      const agora = new Date();
+      relogio.textContent = agora.toLocaleString('pt-BR');
     }
-  });
-  ultimosPesos = dadosMalha.map(i => i.pesodecorte);
+    setInterval(atualizarRelogio, 1000);
+    atualizarRelogio();
 
-  malhaTbody.innerHTML = '';
-  dadosMalha.forEach(item => {
-    const tr = document.createElement('tr');
-    if (novos.find(n => n.pesodecorte === item.pesodecorte)) {
-      tr.classList.add('nova');
-    }
-    tr.innerHTML = `
-      <td>${item.voo}</td>
-      <td>${item.tipo}</td>
-      <td>${item.aviao}</td>
-      <td>${item.rota}</td>
-      <td>${item.pesodecorte}</td>
-      <td>${item.motivo}</td>
-    `;
-    malhaTbody.appendChild(tr);
-  });
-}
+    let ultimosPesos = [];
+    let checkinTimeouts = new Map();
+    let etdTimeouts = new Map();
 
-function tocarSom(url) {
-  const audio = new Audio(url);
-  audio.play().catch(() => {});
-}
-
-// Limpa efeito amarelo após 1 minuto
-function limparAmarelo(tr, classe) {
-  if (classe === 'checkin-atual') {
-    clearTimeout(checkinTimeouts.get(tr));
-    checkinTimeouts.delete(tr);
-  } else if (classe === 'etd-atual') {
-    clearTimeout(etdTimeouts.get(tr));
-    etdTimeouts.delete(tr);
-  }
-  tr.classList.remove(classe);
-}
-
-// Atualiza Painel e controla sons e destaques
-function atualizarPainel(dadosPainel) {
-  painelTbody.innerHTML = '';
-
-  const agora = new Date();
-
-  dadosPainel.forEach(item => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${item.data}</td>
-      <td>${item.voo}</td>
-      <td>${item.origemRota}</td>
-      <td>${item.destino}</td>
-      <td>${item.acft}</td>
-      <td>${item.checkin}</td>
-      <td>${item.etd}</td>
-    `;
-
-    painelTbody.appendChild(tr);
-
-    // Comparar horários atuais com check-in e ETD
-    if (item.checkin) {
-      const checkinDate = parseHoraData(item.data, item.checkin);
-      if (checarHorarioAgora(checkinDate, agora)) {
-        tr.classList.add('checkin-atual');
-        tocarSom('https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg');
-        // Remove destaque após 1 min
-        const timeoutId = setTimeout(() => limparAmarelo(tr, 'checkin-atual'), 60000);
-        checkinTimeouts.set(tr, timeoutId);
+    async function buscarDados() {
+      statusDiv.textContent = 'Buscando dados...';
+      try {
+        const res = await fetch(urlAPI);
+        const dados = await res.json();
+        atualizarMalha(dados.filter(d => d.origem === 'MALHA'));
+        atualizarPainel(dados.filter(d => d.origem === 'PLANEJAMENTO'));
+        statusDiv.textContent = `Última atualização: ${new Date().toLocaleTimeString()}`;
+      } catch (e) {
+        statusDiv.textContent = 'Erro ao buscar dados.';
+        console.error(e);
       }
     }
 
-    if (item.etd) {
-      const etdDate = parseHoraData(item.data, item.etd);
-      if (checarHorarioAgora(etdDate, agora)) {
-        tr.classList.add('etd-atual');
-        tocarSom('https://actions.google.com/sounds/v1/transportation/airplane_takeoff.ogg');
-        // Remove destaque após 1 min
-        const timeoutId = setTimeout(() => limparAmarelo(tr, 'etd-atual'), 60000);
-        etdTimeouts.set(tr, timeoutId);
+    function atualizarMalha(dadosMalha) {
+      let novos = [];
+      dadosMalha.forEach(item => {
+        if (!ultimosPesos.includes(item.pesodecorte)) {
+          novos.push(item);
+        }
+      });
+      ultimosPesos = dadosMalha.map(i => i.pesodecorte);
+
+      malhaTbody.innerHTML = '';
+      dadosMalha.forEach(item => {
+        const tr = document.createElement('tr');
+        if (novos.find(n => n.pesodecorte === item.pesodecorte)) {
+          tr.classList.add('nova');
+        }
+        tr.innerHTML = `
+          <td>${item.voo}</td>
+          <td>${item.tipo}</td>
+          <td>${item.aviao}</td>
+          <td>${item.rota}</td>
+          <td>${item.pesodecorte}</td>
+          <td>${item.motivo}</td>
+        `;
+        malhaTbody.appendChild(tr);
+      });
+    }
+
+    function tocarSom(url) {
+      const audio = new Audio(url);
+      audio.play().catch(() => {});
+    }
+
+    function limparAmarelo(tr, classe) {
+      if (classe === 'checkin-atual') {
+        clearTimeout(checkinTimeouts.get(tr));
+        checkinTimeouts.delete(tr);
+      } else if (classe === 'etd-atual') {
+        clearTimeout(etdTimeouts.get(tr));
+        etdTimeouts.delete(tr);
+      }
+      tr.classList.remove(classe);
+    }
+
+    function atualizarPainel(dadosPainel) {
+      painelTbody.innerHTML = '';
+      const agora = new Date();
+      dadosPainel.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${item.data}</td>
+          <td>${item.voo}</td>
+          <td>${item.origemRota}</td>
+          <td>${item.destino}</td>
+          <td>${item.acft}</td>
+          <td>${item.checkin}</td>
+          <td>${item.etd}</td>
+        `;
+        painelTbody.appendChild(tr);
+
+        if (item.checkin) {
+          const checkinDate = parseHoraData(item.data, item.checkin);
+          if (checarHorarioAgora(checkinDate, agora)) {
+            tr.classList.add('checkin-atual');
+            tocarSom('https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg');
+            const timeoutId = setTimeout(() => limparAmarelo(tr, 'checkin-atual'), 60000);
+            checkinTimeouts.set(tr, timeoutId);
+          }
+        }
+
+        if (item.etd) {
+          const etdDate = parseHoraData(item.data, item.etd);
+          if (checarHorarioAgora(etdDate, agora)) {
+            tr.classList.add('etd-atual');
+            tocarSom('https://actions.google.com/sounds/v1/transportation/airplane_takeoff.ogg');
+            const timeoutId = setTimeout(() => limparAmarelo(tr, 'etd-atual'), 60000);
+            etdTimeouts.set(tr, timeoutId);
+          }
+        }
+      });
+
+      painelTbody.parentElement.scrollTop = 0;
+    }
+
+    function parseHoraData(dataStr, horaStr) {
+      try {
+        let hoje = new Date();
+        let dia, mes, ano;
+        if (dataStr.includes('/')) {
+          let partes = dataStr.split('/');
+          dia = parseInt(partes[0]);
+          mes = parseInt(partes[1]) - 1;
+          ano = partes.length === 3 ? parseInt(partes[2]) : hoje.getFullYear();
+        } else if (dataStr.includes('-')) {
+          let partes = dataStr.split('-');
+          ano = parseInt(partes[0]);
+          mes = parseInt(partes[1]) - 1;
+          dia = parseInt(partes[2]);
+        } else {
+          dia = hoje.getDate();
+          mes = hoje.getMonth();
+          ano = hoje.getFullYear();
+        }
+        let partesHora = horaStr.split(':');
+        let hora = parseInt(partesHora[0]);
+        let min = parseInt(partesHora[1]);
+        return new Date(ano, mes, dia, hora, min, 0, 0);
+      } catch {
+        return null;
       }
     }
-  });
 
-  // Scroll PAINEL para cima (mais recentes no topo)
-  painelTbody.parentElement.scrollTop = 0;
-}
-
-// Função para montar um Date a partir de data string (formato dd/mm ou yyyy-mm-dd) + hora hh:mm
-function parseHoraData(dataStr, horaStr) {
-  try {
-    let hoje = new Date();
-    let dia, mes, ano;
-    if (dataStr.includes('/')) {
-      // formato dd/mm ou dd/mm/yyyy
-      let partes = dataStr.split('/');
-      dia = parseInt(partes[0]);
-      mes = parseInt(partes[1]) - 1;
-      ano = partes.length === 3 ? parseInt(partes[2]) : hoje.getFullYear();
-    } else if (dataStr.includes('-')) {
-      // formato yyyy-mm-dd
-      let partes = dataStr.split('-');
-      ano = parseInt(partes[0]);
-      mes = parseInt(partes[1]) - 1;
-      dia = parseInt(partes[2]);
-    } else {
-      dia = hoje.getDate();
-      mes = hoje.getMonth();
-      ano = hoje.getFullYear();
+    function checarHorarioAgora(data, agora) {
+      if (!data) return false;
+      const diff = data.getTime() - agora.getTime();
+      return diff >= 0 && diff < 60000;
     }
-    let partesHora = horaStr.split(':');
-    let hora = parseInt(partesHora[0]);
-    let min = parseInt(partesHora[1]);
-    return new Date(ano, mes, dia, hora, min, 0, 0);
-  } catch {
-    return null;
-  }
-}
 
-// Checa se horário está entre agora e 59 segundos depois (pra avisar 1 vez)
-function checarHorarioAgora(data, agora) {
-  if (!data) return false;
-  const diff = data.getTime() - agora.getTime();
-  return diff >= 0 && diff < 60000; // dentro de 1 minuto
-}
-
-// Atualiza a cada 10s (pode ajustar)
-setInterval(buscarDados, 10000);
-buscarDados();
-</script>
+    setInterval(buscarDados, 10000);
+    buscarDados();
+  </script>
 </body>
 </html>
