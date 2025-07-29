@@ -2,102 +2,228 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <title>Painel de Voos - LATAM</title>
+  <title>Painel LATAM</title>
   <style>
     body {
-      font-family: 'Segoe UI', sans-serif;
-      margin: 0;
-      padding: 2rem;
-      background-color: #f5f6fa;
+      font-family: Arial, sans-serif;
+      display: flex;
+      gap: 20px;
+      padding: 20px;
+      background: #121212;
+      color: #eee;
     }
-
-    h1 {
-      color: #333;
+    table {
+      border-collapse: collapse;
+      width: 48%;
+      background: #222;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    th, td {
+      border: 1px solid #555;
+      padding: 8px 12px;
       text-align: center;
-      margin-bottom: 2rem;
     }
-
-    ul {
-      list-style: none;
-      padding: 0;
+    th {
+      background: #333;
+      font-weight: bold;
     }
-
-    li {
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-      padding: 1.2rem 1.5rem;
-      margin-bottom: 1.5rem;
-      line-height: 1.6;
-      color: #444;
+    .new-row {
+      background-color: #b33030 !important;
+      color: white;
+      transition: background-color 1s ease;
     }
-
-    strong {
-      color: #111;
+    .checkin-alert {
+      background-color: #d6b345 !important;
+      color: black;
+      transition: background-color 1s ease;
     }
-
-    .erro {
-      color: red;
-      text-align: center;
-      margin-top: 2rem;
-    }
-
-    .loading {
-      text-align: center;
-      font-size: 1.2rem;
-      color: #666;
+    .etd-alert {
+      background-color: #4a90e2 !important;
+      color: white;
+      transition: background-color 1s ease;
     }
   </style>
 </head>
 <body>
-  <h1>Painel de Voos Cortados - LATAM</h1>
-  <div id="status" class="loading">Carregando dados...</div>
-  <ul id="lista-voos"></ul>
 
-  <script>
-    const url = 'https://script.google.com/macros/s/AKfycbymWN6wZteNypipOJnIiWgyrOEwqZwyfFr3dGwtNBq3z_9Eu54N4FEsFES7jnquns0I/exec';
+  <table id="malhaTable">
+    <thead>
+      <tr>
+        <th colspan="6">MALHA</th>
+      </tr>
+      <tr>
+        <th>Voo</th>
+        <th>Tipo</th>
+        <th>Avião</th>
+        <th>Rota</th>
+        <th>Peso Corte</th>
+        <th>Motivo</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
-    fetch(url)
-      .then(response => response.json())
+  <table id="painelTable">
+    <thead>
+      <tr>
+        <th colspan="8">PAINEL</th>
+      </tr>
+      <tr>
+        <th>Data</th>
+        <th>Voo</th>
+        <th>Origem</th>
+        <th>Destino</th>
+        <th>Avião</th>
+        <th>Check-in</th>
+        <th>ETD</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+<script>
+  const urlAPI = 'https://script.google.com/macros/s/AKfycbwvEhPp4VBNjlOuL2Y0eqRc1EHREbv6vuucxgGPhzvWe26tX2sp6p6H6Jhb9S3-7b9H/exec'; // <--- coloque a URL do seu webapp aqui
+
+  // Estado pra detectar linhas novas MALHA e tempo de destaque
+  const malhaIds = new Set();
+
+  // Estado pra controlar alertas de checkin e ETD (pra não disparar som várias vezes)
+  const checkinAlertaAtivos = new Set();
+  const etdAlertaAtivos = new Set();
+
+  function tocaSom(freq, duration=500) {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = audioCtx.createOscillator();
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    oscillator.connect(audioCtx.destination);
+    oscillator.start();
+    setTimeout(() => {
+      oscillator.stop();
+      audioCtx.close();
+    }, duration);
+  }
+
+  function formataHora(texto) {
+    // formato esperado "HH:mm"
+    if (!texto) return null;
+    const parts = texto.split(':');
+    if(parts.length !== 2) return null;
+    const d = new Date();
+    d.setHours(parseInt(parts[0],10));
+    d.setMinutes(parseInt(parts[1],10));
+    d.setSeconds(0);
+    d.setMilliseconds(0);
+    return d;
+  }
+
+  function atualiza() {
+    fetch(urlAPI)
+      .then(r => r.json())
       .then(dados => {
-        const lista = document.getElementById('lista-voos');
-        const status = document.getElementById('status');
+        // Separar MALHA e PAINEL
+        const malha = dados.filter(item => item.origem === 'MALHA');
+        const painel = dados.filter(item => item.origem === 'PLANEJAMENTO');
 
-        const dadosFiltrados = dados.filter(item => item.voo && item.peso && item.motivo);
-
-        if (dadosFiltrados.length === 0) {
-          status.textContent = '✅ Nenhum voo cortado no momento.';
-          return;
-        }
-
-        status.style.display = 'none';
-
-        dadosFiltrados.forEach(item => {
-          const li = document.createElement('li');
-          li.innerHTML = `
-            <strong>Voo:</strong> ${item.voo}<br>
-            <strong>Tipo:</strong> ${item.tipo}<br>
-            <strong>Rota:</strong> ${item.rota}<br>
-            <strong>Motivo:</strong> ${item.motivo}<br>
-            <strong>Peso:</strong> ${item.peso}<br>
-            <strong>Data:</strong> ${formatarData(item.data)}<br>
-            <strong>Hora:</strong> ${item.hora}
-          `;
-          lista.appendChild(li);
-        });
+        atualizaMalha(malha);
+        atualizaPainel(painel);
       })
-      .catch(error => {
-        console.error('Erro ao buscar dados:', error);
-        document.getElementById('status').className = 'erro';
-        document.getElementById('status').textContent = 'Erro ao carregar dados.';
-      });
+      .catch(err => console.error('Erro fetch API:', err));
+  }
 
-    function formatarData(data) {
-      if (!data) return '-';
-      const dt = new Date(data);
-      if (isNaN(dt)) return data;
-      return dt.toLocaleDateString('pt-BR');
-    }
-  </script>
+  function atualizaMalha(dados) {
+    const tbody = document.querySelector('#malhaTable tbody');
+    tbody.innerHTML = '';
+
+    dados.forEach(item => {
+      const row = document.createElement('tr');
+
+      // Identificador único simples (voo + peso + motivo)
+      const id = item.voo + '|' + item.pesodecorte + '|' + item.motivo;
+
+      if (!malhaIds.has(id)) {
+        // Nova linha detectada
+        malhaIds.add(id);
+        row.classList.add('new-row');
+        // Remover destaque vermelho após 10s
+        setTimeout(() => {
+          row.classList.remove('new-row');
+        }, 10000);
+      }
+
+      row.innerHTML = `
+        <td>${item.voo}</td>
+        <td>${item.tipo || ''}</td>
+        <td>${item.aviao || ''}</td>
+        <td>${item.rota || ''}</td>
+        <td>${item.pesodecorte}</td>
+        <td>${item.motivo || ''}</td>
+      `;
+      tbody.appendChild(row);
+    });
+  }
+
+  function atualizaPainel(dados) {
+    const tbody = document.querySelector('#painelTable tbody');
+    tbody.innerHTML = '';
+
+    const agora = new Date();
+
+    dados.forEach(item => {
+      const row = document.createElement('tr');
+
+      // Formatando checkin e ETD para Date
+      const checkinDate = formataHora(item.checkin);
+      const etdDate = formataHora(item.etd);
+
+      // Comparar horário atual com checkin para alertar
+      if (checkinDate && Math.abs(agora - checkinDate) < 60000) { // menos de 1min de diferença
+        if (!checkinAlertaAtivos.has(item.voo)) {
+          checkinAlertaAtivos.add(item.voo);
+          row.classList.add('checkin-alert');
+          tocaSom(440, 1500); // som 440Hz por 1,5s
+          setTimeout(() => {
+            row.classList.remove('checkin-alert');
+            checkinAlertaAtivos.delete(item.voo);
+          }, 60000);
+        } else {
+          row.classList.add('checkin-alert');
+        }
+      }
+
+      // Comparar horário atual com ETD para alertar avião partindo
+      if (etdDate && Math.abs(agora - etdDate) < 60000) { // menos de 1min
+        if (!etdAlertaAtivos.has(item.voo)) {
+          etdAlertaAtivos.add(item.voo);
+          row.classList.add('etd-alert');
+          tocaSom(880, 2000); // som 880Hz por 2s
+          setTimeout(() => {
+            row.classList.remove('etd-alert');
+            etdAlertaAtivos.delete(item.voo);
+          }, 60000);
+        } else {
+          row.classList.add('etd-alert');
+        }
+      }
+
+      row.innerHTML = `
+        <td>${item.data || ''}</td>
+        <td>${item.voo || ''}</td>
+        <td>${item.origemRota || ''}</td>
+        <td>${item.destino || ''}</td>
+        <td>${item.acft || ''}</td>
+        <td>${item.checkin || ''}</td>
+        <td>${item.etd || ''}</td>
+      `;
+      tbody.appendChild(row);
+    });
+  }
+
+  // Atualiza a cada 30 segundos
+  atualiza();
+  setInterval(atualiza, 30000);
+</script>
+
 </body>
 </html>
