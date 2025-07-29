@@ -1,137 +1,80 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <title>Painel LATAM - Lista de Voos Cortados</title>
-  <style>
-    * {
-      box-sizing: border-box;
-    }
-    body {
-      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-      background-color: #f5f7fa;
-      color: #2c3e50;
-      margin: 0;
-      padding: 2rem;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      min-height: 100vh;
-    }
-
-    h1 {
-      margin-bottom: 1.5rem;
-      font-weight: 700;
-      font-size: 2rem;
-      color: #34495e;
-    }
-
-    #btn-atualizar {
-      background-color: #1f78c1;
-      border: none;
-      color: white;
-      padding: 0.6rem 1.5rem;
-      font-size: 1rem;
-      border-radius: 6px;
-      cursor: pointer;
-      box-shadow: 0 3px 8px rgba(31, 120, 193, 0.4);
-      transition: background-color 0.3s ease;
-      margin-bottom: 2rem;
-    }
-    #btn-atualizar:hover {
-      background-color: #145a8d;
-      box-shadow: 0 4px 12px rgba(20, 90, 141, 0.6);
-    }
-
-    #erro {
-      color: #e74c3c;
-      font-weight: 600;
-      margin-bottom: 1rem;
-      min-height: 1.5rem;
-      text-align: center;
-      max-width: 600px;
-    }
-
-    #lista-dados {
-      list-style: none;
-      padding: 0;
-      max-width: 700px;
-      width: 100%;
-      background-color: white;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(44, 62, 80, 0.1);
-      overflow: hidden;
-      font-size: 1rem;
-    }
-
-    #lista-dados li {
-      padding: 1rem 1.5rem;
-      border-bottom: 1px solid #ecf0f1;
-      transition: background-color 0.2s ease;
-      line-height: 1.5;
-    }
-    #lista-dados li:last-child {
-      border-bottom: none;
-    }
-    #lista-dados li:hover {
-      background-color: #e8f1fc;
-    }
-
-    #lista-dados li strong {
-      color: #1f78c1;
-      width: 6rem;
-      display: inline-block;
-    }
-  </style>
+<meta charset="UTF-8" />
+<title>Lista de Voos</title>
+<style>
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f7f9fc;
+    color: #212121;
+    padding: 20px;
+  }
+  ul {
+    list-style: none;
+    padding-left: 0;
+    max-width: 700px;
+    margin: auto;
+  }
+  li {
+    background: white;
+    margin-bottom: 12px;
+    border-radius: 8px;
+    padding: 16px 20px;
+    box-shadow: 0 2px 8px rgb(0 0 0 / 0.1);
+  }
+  strong {
+    color: #3f51b5;
+  }
+  .field {
+    margin-bottom: 6px;
+  }
+</style>
 </head>
 <body>
-  <h1>Painel LATAM - Lista de Voos Cortados</h1>
-  <button id="btn-atualizar">Atualizar dados</button>
-  <div id="erro"></div>
-  <ul id="lista-dados">
-    <li>Pressione "Atualizar dados" para carregar.</li>
-  </ul>
+  <h2>Voos Cortados</h2>
+  <ul id="lista-voos"></ul>
 
   <script>
-    const url = 'https://script.google.com/macros/s/AKfycbymWN6wZteNypipOJnIiWgyrOEwqZwyfFr3dGwtNBq3z_9Eu54N4FEsFES7jnquns0I/exec';
+    // Dados simulados recebidos da API / Apps Script
+    const dados = [
+      {motivo:"", hora:"09:42:12", tipo:"", data:"", voo:7.0, rota:"", peso:2232.0},
+      {voo:"LA-4742", data:"Tue Jul 29 00:00:00 GMT-03:00 2025", hora:"09:42:12", peso:456.0, tipo:"PAX", rota:"GRU-SLZ", motivo:"VOLUME"},
+      {hora:"09:42:12", motivo:"VOLUME", voo:"LA-3330", tipo:"PAX", data:"Tue Jul 29 00:00:00 GMT-03:00 2025", peso:111.0, rota:"GRU-VIX"},
+      {tipo:"PAX", rota:"GRU-MAO", data:"Tue Jul 29 00:00:00 GMT-03:00 2025", hora:"09:42:12", voo:"LA-3560", motivo:"VOLUME", peso:233.0},
+      {rota:"GRU-FOR", data:"Tue Jul 29 00:00:00 GMT-03:00 2025", hora:"09:42:12", voo:"LA-3020", motivo:"VOLUME", tipo:"PAX", peso:182.0},
+      {data:"Tue Jul 29 00:00:00 GMT-03:00 2025", tipo:"PAX", rota:"GRU-BEL", peso:258.0, voo:"LA-3228", motivo:"VOLUME", hora:"09:42:12"},
+      {data:"Tue Jul 29 00:00:00 GMT-03:00 2025", tipo:"PAX", voo:"LA-4531", rota:"GRU-LDB", motivo:"ACFT STRUTCURAL", hora:"09:42:12", peso:784.0},
+      {hora:"09:42:12", tipo:"PAX", peso:208.0, data:"Tue Jul 29 00:00:00 GMT-03:00 2025", rota:"GRU-CWB", voo:"LA-3284", motivo:"UNAVAILABLE CARGO"}
+    ];
 
-    async function carregarDados() {
-      document.getElementById('erro').textContent = '';
-      const lista = document.getElementById('lista-dados');
-      lista.innerHTML = '<li>Carregando...</li>';
-
-      try {
-        const response = await fetch(url);
-        if (!response.ok) throw new Error(`Erro HTTP: ${response.status}`);
-        const dados = await response.json();
-
-        if (!Array.isArray(dados) || dados.length === 0) {
-          lista.innerHTML = '<li>Não há dados para mostrar.</li>';
-          return;
-        }
-
-        lista.innerHTML = '';
-
-        dados.forEach(item => {
-          const li = document.createElement('li');
-          li.innerHTML = `
-            <strong>Voo:</strong> ${item.voo || 'N/A'}<br>
-            <strong>Tipo:</strong> ${item.tipo || 'N/A'}<br>
-            <strong>Rota:</strong> ${item.rota || 'N/A'}<br>
-            <strong>Motivo:</strong> ${item.motivo || 'N/A'}<br>
-            <strong>Peso:</strong> ${item.peso || 'N/A'}<br>
-            <strong>Data:</strong> ${item.data || 'N/A'}<br>
-            <strong>Hora:</strong> ${item.hora || 'N/A'}
-          `;
-          lista.appendChild(li);
-        });
-      } catch (e) {
-        lista.innerHTML = '';
-        document.getElementById('erro').textContent = `Erro ao carregar dados: ${e.message}`;
-      }
+    function formatarData(dataStr) {
+      if (!dataStr) return '';
+      const d = new Date(dataStr);
+      if (isNaN(d)) return dataStr;
+      return d.toLocaleDateString('pt-BR');
     }
 
-    document.getElementById('btn-atualizar').addEventListener('click', carregarDados);
+    const lista = document.getElementById('lista-voos');
+
+    dados.forEach(item => {
+      // Ignorar itens sem voo válido (ex: voo = 7.0 no primeiro item)
+      if (!item.voo || typeof item.voo !== 'string' || item.voo.trim().length < 3) return;
+
+      const li = document.createElement('li');
+
+      li.innerHTML = `
+        <div class="field"><strong>Voo:</strong> ${item.voo}</div>
+        <div class="field"><strong>Tipo:</strong> ${item.tipo || '-'}</div>
+        <div class="field"><strong>Rota:</strong> ${item.rota || '-'}</div>
+        <div class="field"><strong>Motivo:</strong> ${item.motivo || '-'}</div>
+        <div class="field"><strong>Peso:</strong> ${item.peso ?? '-'}</div>
+        <div class="field"><strong>Data:</strong> ${formatarData(item.data)}</div>
+        <div class="field"><strong>Hora:</strong> ${item.hora || '-'}</div>
+      `;
+
+      lista.appendChild(li);
+    });
   </script>
 </body>
 </html>
