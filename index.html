@@ -2,28 +2,50 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <title>Teste Painel LATAM</title>
+  <title>Painel LATAM - Lista de Voos Cortados</title>
 </head>
 <body>
   <h1>Painel LATAM - Dados de Voos Cortados</h1>
   <button id="btn-atualizar">Atualizar dados</button>
-  <pre id="resultado">Clique no botão para carregar os dados.</pre>
   <div id="erro" style="color: red; font-weight: bold;"></div>
+  <ul id="lista-dados"></ul>
 
   <script>
     const url = 'https://script.google.com/macros/s/AKfycbymWN6wZteNypipOJnIiWgyrOEwqZwyfFr3dGwtNBq3z_9Eu54N4FEsFES7jnquns0I/exec';
 
     async function carregarDados() {
       document.getElementById('erro').textContent = '';
-      document.getElementById('resultado').textContent = 'Carregando...';
+      const lista = document.getElementById('lista-dados');
+      lista.innerHTML = '<li>Carregando...</li>';
 
       try {
         const response = await fetch(url);
         if (!response.ok) throw new Error(`Erro HTTP: ${response.status}`);
         const dados = await response.json();
-        document.getElementById('resultado').textContent = JSON.stringify(dados, null, 2);
+
+        if (!Array.isArray(dados) || dados.length === 0) {
+          lista.innerHTML = '<li>Não há dados para mostrar.</li>';
+          return;
+        }
+
+        // Limpa a lista
+        lista.innerHTML = '';
+
+        dados.forEach(item => {
+          const li = document.createElement('li');
+          li.innerHTML = `
+            <strong>Voo:</strong> ${item.voo || 'N/A'}<br>
+            <strong>Tipo:</strong> ${item.tipo || 'N/A'}<br>
+            <strong>Rota:</strong> ${item.rota || 'N/A'}<br>
+            <strong>Peso:</strong> ${item.peso || 'N/A'}<br>
+            <strong>Motivo:</strong> ${item.motivo || 'N/A'}<br>
+            <strong>Data:</strong> ${item.data || 'N/A'}<br>
+            <strong>Hora:</strong> ${item.hora || 'N/A'}
+          `;
+          lista.appendChild(li);
+        });
       } catch (e) {
-        document.getElementById('resultado').textContent = '';
+        lista.innerHTML = '';
         document.getElementById('erro').textContent = `Erro ao carregar dados: ${e.message}`;
       }
     }
