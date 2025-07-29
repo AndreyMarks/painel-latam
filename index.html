@@ -38,6 +38,8 @@
       justify-content: space-between;
       align-items: center;
       color: #fff;
+      height: 60px;
+      margin-bottom: 35px;
     }
 
     .container {
@@ -46,19 +48,22 @@
       overflow: hidden;
     }
 
-    #malha, #painel {
-      padding: 5px;
-    }
 
-    #malha {
-      flex: 0 0 40%;
-      overflow: hidden;
-    }
 
-    #painel {
-      flex: 0 0 60%;
-      overflow-y: auto;
-    }
+   .container {
+  display: flex;
+  height: 100%;
+}
+
+
+#malha, #painel {
+  flex: 1;
+  max-height: 50vh;
+  overflow-y: auto;
+  padding: 5px;
+}
+
+
 
     h3 {
       margin: 0 0 5px;
@@ -66,12 +71,24 @@
       color: var(--latam-vermelho);
     }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      background-color: var(--cinza-medio);
-      font-size: 0.75rem;
-    }
+ .tabela-container {
+  max-height: 50vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+thead {
+  position: sticky;
+  top: 0;
+  background-color: var(--latam-azul);
+  z-index: 2;
+}
 
     th, td {
       padding: 6px;
