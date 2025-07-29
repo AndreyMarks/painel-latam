@@ -2,94 +2,102 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Painel LATAM - Cortes (API Real)</title>
+  <title>Painel de Voos - LATAM</title>
   <style>
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #f5f7fa;
-      color: #202124;
-      margin: 2rem;
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 2rem;
+      background-color: #f5f6fa;
     }
+
     h1 {
-      margin-bottom: 1rem;
-      font-weight: 700;
-      font-size: 2rem;
+      color: #333;
+      text-align: center;
+      margin-bottom: 2rem;
     }
+
     ul {
       list-style: none;
       padding: 0;
-      max-width: 800px;
-      margin: 0 auto;
     }
+
     li {
       background: white;
-      border-radius: 6px;
-      padding: 1rem 1.5rem;
-      margin-bottom: 1rem;
-      box-shadow: 0 2px 6px rgb(60 64 67 / 0.15);
-      transition: box-shadow 0.2s ease;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+      padding: 1.2rem 1.5rem;
+      margin-bottom: 1.5rem;
+      line-height: 1.6;
+      color: #444;
     }
-    li:hover {
-      box-shadow: 0 4px 12px rgb(60 64 67 / 0.3);
-    }
+
     strong {
-      color: #3c4043;
+      color: #111;
     }
+
+    .erro {
+      color: red;
+      text-align: center;
+      margin-top: 2rem;
+    }
+
     .loading {
       text-align: center;
       font-size: 1.2rem;
-      color: #5f6368;
-    }
-    .error {
-      color: #d93025;
-      font-weight: 600;
-      text-align: center;
+      color: #666;
     }
   </style>
 </head>
 <body>
-  <h1>🛫 Painel de Voos Cortados - LATAM (API Real)</h1>
+  <h1>Painel de Voos Cortados - LATAM</h1>
   <div id="status" class="loading">Carregando dados...</div>
   <ul id="lista-voos"></ul>
 
   <script>
-    async function buscarVoos() {
-      const url = 'https://script.google.com/macros/s/AKfycbymWN6wZteNypipOJnIiWgyrOEwqZwyfFr3dGwtNBq3z_9Eu54N4FEsFES7jnquns0I/exec';
-      const statusEl = document.getElementById('status');
-      const listaEl = document.getElementById('lista-voos');
+    const url = 'https://script.google.com/macros/s/AKfycbymWN6wZteNypipOJnIiWgyrOEwqZwyfFr3dGwtNBq3z_9Eu54N4FEsFES7jnquns0I/exec';
 
-      try {
-        const res = await fetch(url, {cache: 'no-cache'});
-        if (!res.ok) throw new Error(`Erro HTTP ${res.status}`);
-        const dados = await res.json();
+    fetch(url)
+      .then(response => response.json())
+      .then(dados => {
+        const lista = document.getElementById('lista-voos');
+        const status = document.getElementById('status');
 
-        if (!Array.isArray(dados) || dados.length === 0) {
-          statusEl.textContent = 'Nenhum dado encontrado.';
+        const dadosFiltrados = dados.filter(item => item.voo && item.peso && item.motivo);
+
+        if (dadosFiltrados.length === 0) {
+          status.textContent = '✅ Nenhum voo cortado no momento.';
           return;
         }
 
-        statusEl.style.display = 'none';
-        listaEl.innerHTML = dados.map(item => `
-          <li>
-            <strong>Voo:</strong> ${item.voo || '-'}<br>
-            <strong>Tipo:</strong> ${item.tipo || '-'}<br>
-            <strong>Rota:</strong> ${item.rota || '-'}<br>
-            <strong>Motivo:</strong> ${item.motivo || '-'}<br>
-            <strong>Peso:</strong> ${item.peso || '-'}<br>
-            <strong>Data:</strong> ${item.data ? new Date(item.data).toLocaleDateString('pt-BR') : '-'}<br>
-            <strong>Hora:</strong> ${item.hora || '-'}
-          </li>
-        `).join('');
+        status.style.display = 'none';
 
-      } catch (err) {
-        statusEl.textContent = 'Erro ao carregar dados: ' + err.message;
-        statusEl.className = 'error';
-        console.error(err);
-      }
+        dadosFiltrados.forEach(item => {
+          const li = document.createElement('li');
+          li.innerHTML = `
+            <strong>Voo:</strong> ${item.voo}<br>
+            <strong>Tipo:</strong> ${item.tipo}<br>
+            <strong>Rota:</strong> ${item.rota}<br>
+            <strong>Motivo:</strong> ${item.motivo}<br>
+            <strong>Peso:</strong> ${item.peso}<br>
+            <strong>Data:</strong> ${formatarData(item.data)}<br>
+            <strong>Hora:</strong> ${item.hora}
+          `;
+          lista.appendChild(li);
+        });
+      })
+      .catch(error => {
+        console.error('Erro ao buscar dados:', error);
+        document.getElementById('status').className = 'erro';
+        document.getElementById('status').textContent = 'Erro ao carregar dados.';
+      });
+
+    function formatarData(data) {
+      if (!data) return '-';
+      const dt = new Date(data);
+      if (isNaN(dt)) return data;
+      return dt.toLocaleDateString('pt-BR');
     }
-
-    window.onload = buscarVoos;
   </script>
 </body>
 </html>
