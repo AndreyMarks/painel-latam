@@ -1,229 +1,280 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <title>Painel LATAM</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      display: flex;
-      gap: 20px;
-      padding: 20px;
-      background: #121212;
-      color: #eee;
-    }
-    table {
-      border-collapse: collapse;
-      width: 48%;
-      background: #222;
-      border-radius: 6px;
-      overflow: hidden;
-    }
-    th, td {
-      border: 1px solid #555;
-      padding: 8px 12px;
-      text-align: center;
-    }
-    th {
-      background: #333;
-      font-weight: bold;
-    }
-    .new-row {
-      background-color: #b33030 !important;
-      color: white;
-      transition: background-color 1s ease;
-    }
-    .checkin-alert {
-      background-color: #d6b345 !important;
-      color: black;
-      transition: background-color 1s ease;
-    }
-    .etd-alert {
-      background-color: #4a90e2 !important;
-      color: white;
-      transition: background-color 1s ease;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Painel LATAM Compacto</title>
+<style>
+  body {
+    margin: 0;
+    padding: 10px;
+    font-family: Arial, sans-serif;
+    background: #111;
+    color: #eee;
+    overflow: hidden; /* Sem scroll geral */
+    display: flex;
+    height: 100vh;
+  }
+  .container {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    height: 100%;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 0.8rem;
+    background: #222;
+    color: #eee;
+  }
+  th, td {
+    border: 1px solid #444;
+    padding: 4px 6px;
+    text-align: center;
+    white-space: nowrap;
+  }
+  th {
+    background: #333;
+    font-weight: bold;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+
+  /* Tabela MALHA ocupa 40% largura, não tem scroll */
+  #malha {
+    flex: 0 0 40%;
+    overflow: hidden;
+  }
+
+  /* Tabela PAINEL ocupa 60% largura, scroll vertical */
+  #painel {
+    flex: 0 0 60%;
+    overflow-y: auto;
+    max-height: 100%;
+    position: relative;
+  }
+
+  /* Linhas novas MALHA (vermelho) */
+  tr.nova {
+    animation: piscarVermelho 2s ease-in-out 3;
+  }
+  @keyframes piscarVermelho {
+    0%, 100% { background-color: transparent; }
+    50% { background-color: #a00; }
+  }
+
+  /* Linha amarelo check-in */
+  tr.checkin-atual {
+    background-color: #f4d35e !important;
+    transition: background-color 1s ease;
+  }
+
+  /* Linha amarelo ETD */
+  tr.etd-atual {
+    background-color: #ffb703 !important;
+    transition: background-color 1s ease;
+  }
+
+  /* Pequeno som e avisos */
+  #status {
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    font-size: 0.75rem;
+    color: #ccc;
+  }
+</style>
 </head>
 <body>
-
-  <table id="malhaTable">
-    <thead>
-      <tr>
-        <th colspan="6">MALHA</th>
-      </tr>
-      <tr>
-        <th>Voo</th>
-        <th>Tipo</th>
-        <th>Avião</th>
-        <th>Rota</th>
-        <th>Peso Corte</th>
-        <th>Motivo</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-
-  <table id="painelTable">
-    <thead>
-      <tr>
-        <th colspan="8">PAINEL</th>
-      </tr>
-      <tr>
-        <th>Data</th>
-        <th>Voo</th>
-        <th>Origem</th>
-        <th>Destino</th>
-        <th>Avião</th>
-        <th>Check-in</th>
-        <th>ETD</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+  <div class="container">
+    <div id="malha">
+      <h3>MALHA (últimos cortes)</h3>
+      <table id="tabela-malha">
+        <thead>
+          <tr>
+            <th>Voo</th><th>Tipo</th><th>Avião</th><th>Rota</th><th>Peso Corte</th><th>Motivo</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div id="painel">
+      <h3>PAINEL (check-in e ETD)</h3>
+      <table id="tabela-painel">
+        <thead>
+          <tr>
+            <th>Data</th><th>Voo</th><th>Origem</th><th>Destino</th><th>Acft</th><th>Check-in</th><th>ETD</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+  <div id="status">Atualizando...</div>
 
 <script>
-  const urlAPI = 'https://script.google.com/macros/s/AKfycbwvEhPp4VBNjlOuL2Y0eqRc1EHREbv6vuucxgGPhzvWe26tX2sp6p6H6Jhb9S3-7b9H/exec'; // <--- coloque a URL do seu webapp aqui
+const urlAPI = 'https://script.googleusercontent.com/macros/echo?user_content_key=AehSKLiSr0yrVByTqnsdhuMQ0lrAZz7oYDuQJayloN7ZCtW8Djm-9B84Q7BbMU__73QCDKKyssiODclrVhdUk8d2UxtI1_wfofHcj_-Nc0w7JdDgoc3Ef6_e_vazhp21ojeuKMvBKkRNf3wCsaqiQjduRj_lIj2bemriHFgEQOEJ6JDnOrqfd08xwUPjO-mu_jqlQE12Tw7x9OVzwRgkGwVsLL1pVySNfB2F-8aj0VE8xqWHCFOf-SLzqQQ16KXhll4dsNvsqjG4R3Pd2JblaG3bQelgNd4IjA&lib=MVQa0GsZblaoDwIrbdo0CUect06epg9QC';
 
-  // Estado pra detectar linhas novas MALHA e tempo de destaque
-  const malhaIds = new Set();
+const malhaTbody = document.querySelector('#tabela-malha tbody');
+const painelTbody = document.querySelector('#tabela-painel tbody');
+const statusDiv = document.getElementById('status');
 
-  // Estado pra controlar alertas de checkin e ETD (pra não disparar som várias vezes)
-  const checkinAlertaAtivos = new Set();
-  const etdAlertaAtivos = new Set();
+let ultimosPesos = [];
+let checkinTimeouts = new Map();
+let etdTimeouts = new Map();
 
-  function tocaSom(freq, duration=500) {
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const oscillator = audioCtx.createOscillator();
-    oscillator.type = 'sine';
-    oscillator.frequency.setValueAtTime(freq, audioCtx.currentTime);
-    oscillator.connect(audioCtx.destination);
-    oscillator.start();
-    setTimeout(() => {
-      oscillator.stop();
-      audioCtx.close();
-    }, duration);
+async function buscarDados() {
+  statusDiv.textContent = 'Buscando dados...';
+  try {
+    const res = await fetch(urlAPI);
+    const dados = await res.json();
+
+    atualizarMalha(dados.filter(d => d.origem === 'MALHA'));
+    atualizarPainel(dados.filter(d => d.origem === 'PLANEJAMENTO'));
+
+    statusDiv.textContent = `Última atualização: ${new Date().toLocaleTimeString()}`;
+  } catch (e) {
+    statusDiv.textContent = 'Erro ao buscar dados.';
+    console.error(e);
   }
+}
 
-  function formataHora(texto) {
-    // formato esperado "HH:mm"
-    if (!texto) return null;
-    const parts = texto.split(':');
-    if(parts.length !== 2) return null;
-    const d = new Date();
-    d.setHours(parseInt(parts[0],10));
-    d.setMinutes(parseInt(parts[1],10));
-    d.setSeconds(0);
-    d.setMilliseconds(0);
-    return d;
+function atualizarMalha(dadosMalha) {
+  // Verifica novas linhas (pesos que ainda não estavam)
+  let novos = [];
+  dadosMalha.forEach(item => {
+    if (!ultimosPesos.includes(item.pesodecorte)) {
+      novos.push(item);
+    }
+  });
+  ultimosPesos = dadosMalha.map(i => i.pesodecorte);
+
+  malhaTbody.innerHTML = '';
+  dadosMalha.forEach(item => {
+    const tr = document.createElement('tr');
+    if (novos.find(n => n.pesodecorte === item.pesodecorte)) {
+      tr.classList.add('nova');
+    }
+    tr.innerHTML = `
+      <td>${item.voo}</td>
+      <td>${item.tipo}</td>
+      <td>${item.aviao}</td>
+      <td>${item.rota}</td>
+      <td>${item.pesodecorte}</td>
+      <td>${item.motivo}</td>
+    `;
+    malhaTbody.appendChild(tr);
+  });
+}
+
+function tocarSom(url) {
+  const audio = new Audio(url);
+  audio.play().catch(() => {});
+}
+
+// Limpa efeito amarelo após 1 minuto
+function limparAmarelo(tr, classe) {
+  if (classe === 'checkin-atual') {
+    clearTimeout(checkinTimeouts.get(tr));
+    checkinTimeouts.delete(tr);
+  } else if (classe === 'etd-atual') {
+    clearTimeout(etdTimeouts.get(tr));
+    etdTimeouts.delete(tr);
   }
+  tr.classList.remove(classe);
+}
 
-  function atualiza() {
-    fetch(urlAPI)
-      .then(r => r.json())
-      .then(dados => {
-        // Separar MALHA e PAINEL
-        const malha = dados.filter(item => item.origem === 'MALHA');
-        const painel = dados.filter(item => item.origem === 'PLANEJAMENTO');
+// Atualiza Painel e controla sons e destaques
+function atualizarPainel(dadosPainel) {
+  painelTbody.innerHTML = '';
 
-        atualizaMalha(malha);
-        atualizaPainel(painel);
-      })
-      .catch(err => console.error('Erro fetch API:', err));
-  }
+  const agora = new Date();
 
-  function atualizaMalha(dados) {
-    const tbody = document.querySelector('#malhaTable tbody');
-    tbody.innerHTML = '';
+  dadosPainel.forEach(item => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${item.data}</td>
+      <td>${item.voo}</td>
+      <td>${item.origemRota}</td>
+      <td>${item.destino}</td>
+      <td>${item.acft}</td>
+      <td>${item.checkin}</td>
+      <td>${item.etd}</td>
+    `;
 
-    dados.forEach(item => {
-      const row = document.createElement('tr');
+    painelTbody.appendChild(tr);
 
-      // Identificador único simples (voo + peso + motivo)
-      const id = item.voo + '|' + item.pesodecorte + '|' + item.motivo;
-
-      if (!malhaIds.has(id)) {
-        // Nova linha detectada
-        malhaIds.add(id);
-        row.classList.add('new-row');
-        // Remover destaque vermelho após 10s
-        setTimeout(() => {
-          row.classList.remove('new-row');
-        }, 10000);
+    // Comparar horários atuais com check-in e ETD
+    if (item.checkin) {
+      const checkinDate = parseHoraData(item.data, item.checkin);
+      if (checarHorarioAgora(checkinDate, agora)) {
+        tr.classList.add('checkin-atual');
+        tocarSom('https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg');
+        // Remove destaque após 1 min
+        const timeoutId = setTimeout(() => limparAmarelo(tr, 'checkin-atual'), 60000);
+        checkinTimeouts.set(tr, timeoutId);
       }
+    }
 
-      row.innerHTML = `
-        <td>${item.voo}</td>
-        <td>${item.tipo || ''}</td>
-        <td>${item.aviao || ''}</td>
-        <td>${item.rota || ''}</td>
-        <td>${item.pesodecorte}</td>
-        <td>${item.motivo || ''}</td>
-      `;
-      tbody.appendChild(row);
-    });
-  }
-
-  function atualizaPainel(dados) {
-    const tbody = document.querySelector('#painelTable tbody');
-    tbody.innerHTML = '';
-
-    const agora = new Date();
-
-    dados.forEach(item => {
-      const row = document.createElement('tr');
-
-      // Formatando checkin e ETD para Date
-      const checkinDate = formataHora(item.checkin);
-      const etdDate = formataHora(item.etd);
-
-      // Comparar horário atual com checkin para alertar
-      if (checkinDate && Math.abs(agora - checkinDate) < 60000) { // menos de 1min de diferença
-        if (!checkinAlertaAtivos.has(item.voo)) {
-          checkinAlertaAtivos.add(item.voo);
-          row.classList.add('checkin-alert');
-          tocaSom(440, 1500); // som 440Hz por 1,5s
-          setTimeout(() => {
-            row.classList.remove('checkin-alert');
-            checkinAlertaAtivos.delete(item.voo);
-          }, 60000);
-        } else {
-          row.classList.add('checkin-alert');
-        }
+    if (item.etd) {
+      const etdDate = parseHoraData(item.data, item.etd);
+      if (checarHorarioAgora(etdDate, agora)) {
+        tr.classList.add('etd-atual');
+        tocarSom('https://actions.google.com/sounds/v1/transportation/airplane_takeoff.ogg');
+        // Remove destaque após 1 min
+        const timeoutId = setTimeout(() => limparAmarelo(tr, 'etd-atual'), 60000);
+        etdTimeouts.set(tr, timeoutId);
       }
+    }
+  });
 
-      // Comparar horário atual com ETD para alertar avião partindo
-      if (etdDate && Math.abs(agora - etdDate) < 60000) { // menos de 1min
-        if (!etdAlertaAtivos.has(item.voo)) {
-          etdAlertaAtivos.add(item.voo);
-          row.classList.add('etd-alert');
-          tocaSom(880, 2000); // som 880Hz por 2s
-          setTimeout(() => {
-            row.classList.remove('etd-alert');
-            etdAlertaAtivos.delete(item.voo);
-          }, 60000);
-        } else {
-          row.classList.add('etd-alert');
-        }
-      }
+  // Scroll PAINEL para cima (mais recentes no topo)
+  painelTbody.parentElement.scrollTop = 0;
+}
 
-      row.innerHTML = `
-        <td>${item.data || ''}</td>
-        <td>${item.voo || ''}</td>
-        <td>${item.origemRota || ''}</td>
-        <td>${item.destino || ''}</td>
-        <td>${item.acft || ''}</td>
-        <td>${item.checkin || ''}</td>
-        <td>${item.etd || ''}</td>
-      `;
-      tbody.appendChild(row);
-    });
+// Função para montar um Date a partir de data string (formato dd/mm ou yyyy-mm-dd) + hora hh:mm
+function parseHoraData(dataStr, horaStr) {
+  try {
+    let hoje = new Date();
+    let dia, mes, ano;
+    if (dataStr.includes('/')) {
+      // formato dd/mm ou dd/mm/yyyy
+      let partes = dataStr.split('/');
+      dia = parseInt(partes[0]);
+      mes = parseInt(partes[1]) - 1;
+      ano = partes.length === 3 ? parseInt(partes[2]) : hoje.getFullYear();
+    } else if (dataStr.includes('-')) {
+      // formato yyyy-mm-dd
+      let partes = dataStr.split('-');
+      ano = parseInt(partes[0]);
+      mes = parseInt(partes[1]) - 1;
+      dia = parseInt(partes[2]);
+    } else {
+      dia = hoje.getDate();
+      mes = hoje.getMonth();
+      ano = hoje.getFullYear();
+    }
+    let partesHora = horaStr.split(':');
+    let hora = parseInt(partesHora[0]);
+    let min = parseInt(partesHora[1]);
+    return new Date(ano, mes, dia, hora, min, 0, 0);
+  } catch {
+    return null;
   }
+}
 
-  // Atualiza a cada 30 segundos
-  atualiza();
-  setInterval(atualiza, 30000);
+// Checa se horário está entre agora e 59 segundos depois (pra avisar 1 vez)
+function checarHorarioAgora(data, agora) {
+  if (!data) return false;
+  const diff = data.getTime() - agora.getTime();
+  return diff >= 0 && diff < 60000; // dentro de 1 minuto
+}
+
+// Atualiza a cada 10s (pode ajustar)
+setInterval(buscarDados, 10000);
+buscarDados();
 </script>
-
 </body>
 </html>
